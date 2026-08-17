@@ -2,6 +2,8 @@
 
 A phone-first PWA interval timer. Build a list of timers, run through them in sequence with tone/vibration alerts, and optionally loop the whole set multiple times. No build step, no dependencies — plain HTML, CSS, and JS.
 
+This repo also contains a from-scratch **native Android rewrite** in [`android/`](android/) — a sideload-only Kotlin/Compose app built to get a live lock-screen timer status and reliable background tone/vibration, which a PWA can't provide on Android. See [android/README.md](android/README.md) for the full build plan. The two apps are independent: the PWA keeps deploying to GitHub Pages from the repo root exactly as before, and the deploy workflow explicitly excludes `android/`.
+
 ## Features
 
 - Sequential timer list with a live progress fill per timer

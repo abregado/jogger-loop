@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - "android/**"
   workflow_dispatch:
 
 permissions:
@@ -24,13 +26,24 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Prepare Pages content
+        run: |
+          mkdir -p _site
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='.claude' \
+            --exclude='android' \
+            --exclude='_site' \
+            ./ _site/
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: "."
+          path: "_site"
 
       - name: Deploy to GitHub Pages
         id: deployment
