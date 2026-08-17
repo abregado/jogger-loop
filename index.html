@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Jogger Loop</title>
+<meta name="description" content="A simple interval timer PWA.">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Jogger Loop">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon-32.png" sizes="32x32">
+<link rel="icon" href="icons/icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div id="app">
+  <header class="control-panel">
+    <button id="editToggleBtn" class="icon-btn" type="button" aria-label="Edit timers" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+    </button>
+    <button id="startStopBtn" class="primary-btn" type="button" disabled>Start</button>
+    <button id="resetBtn" class="secondary-btn" type="button" disabled>Reset</button>
+  </header>
+
+  <section id="loopSettings" class="loop-settings hidden">
+    <div class="loop-count-row">
+      <span class="loop-count-label">Loops</span>
+      <div class="stepper">
+        <button id="loopDecBtn" class="stepper-btn" type="button" aria-label="Decrease loops">−</button>
+        <span id="loopCountValue" class="stepper-value">1</span>
+        <button id="loopIncBtn" class="stepper-btn" type="button" aria-label="Increase loops">+</button>
+      </div>
+    </div>
+    <div class="loop-length-row">
+      <span>One loop: <strong id="loopLengthValue">00:00</strong></span>
+      <span>All loops: <strong id="totalLengthValue">00:00</strong></span>
+    </div>
+    <p class="loop-settings-hint">When all loops finish:</p>
+    <div class="toggle-row">
+      <label><input type="checkbox" id="finishToneToggle"> Tone</label>
+      <label><input type="checkbox" id="finishVibrateToggle"> Vibrate</label>
+    </div>
+  </section>
+
+  <ul id="timerList" class="timer-list" aria-live="off"></ul>
+
+  <p id="emptyState" class="empty-state hidden">No timers yet. Tap the pencil to enter edit mode, then add one.</p>
+
+  <button id="addTimerBtn" class="add-btn hidden" type="button">+ Add Timer</button>
+</div>
+
+<div id="installBanner" class="banner hidden" role="dialog" aria-label="Install app">
+  <p class="banner-text"></p>
+  <div class="banner-actions">
+    <button id="installActionBtn" class="text-btn hidden" type="button">Install</button>
+    <button id="installDismissBtn" class="text-btn" type="button">Got it</button>
+  </div>
+</div>
+
+<div id="fullscreenModal" class="modal hidden" role="dialog" aria-label="Fullscreen preference">
+  <div class="modal-content">
+    <p>Go fullscreen for a distraction-free workout?</p>
+    <div class="modal-actions">
+      <button id="fullscreenYesBtn" class="primary-btn" type="button">Yes</button>
+      <button id="fullscreenNoBtn" class="secondary-btn" type="button">No</button>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
