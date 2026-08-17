@@ -13,10 +13,26 @@ android {
         applicationId = "com.abregado.joggerloop"
         minSdk = 30
         targetSdk = 37
-        versionCode = 1
-        versionName = "1.0"
+        // CI overrides these via -PVERSION_CODE=... -PVERSION_NAME=... derived from the pushed tag.
+        versionCode = (project.findProperty("VERSION_CODE") as String?)?.toIntOrNull() ?: 1
+        versionName = (project.findProperty("VERSION_NAME") as String?) ?: "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        // Only present when CI supplies these via env vars - see android/docs/phase-7-cicd-release.md.
+        // Local `assembleRelease` runs without them produce an unsigned APK, which is expected:
+        // local development should only ever need `assembleDebug`.
+        val releaseKeystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+        if (releaseKeystorePath != null) {
+            create("release") {
+                storeFile = file(releaseKeystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
@@ -24,6 +40,7 @@ android {
             optimization {
                 enable = false
             }
+            signingConfigs.findByName("release")?.let { signingConfig = it }
         }
     }
     compileOptions {
