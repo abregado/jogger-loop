@@ -1,9 +1,10 @@
 import { state } from "../state.js";
 import { getProgress, getRemainingMs } from "../timerEngine.js";
-import { formatMs } from "../utils.js";
+import { formatMs, computeLoopLengths } from "../utils.js";
 import { bindEditControls } from "./editControls.js";
 import { activateTimeEdit } from "./keypadInput.js";
 import { updateLoopControls } from "./loopControls.js";
+import { createIconButton, ICON_PATHS } from "./icons.js";
 
 const listEl = document.getElementById("timerList");
 const emptyStateEl = document.getElementById("emptyState");
@@ -67,66 +68,59 @@ function buildRow(timer, index) {
   content.append(main);
 
   if (state.editMode) {
-    content.appendChild(buildEditControls(timer, index));
+    content.appendChild(buildEditControls(timer, index, label));
   }
 
   li.append(fill, content);
   return li;
 }
 
-function buildEditControls(timer, index) {
+function buildEditControls(timer, index, labelEl) {
   const wrap = document.createElement("div");
   wrap.className = "timer-edit-controls";
 
-  const labelInput = document.createElement("input");
-  labelInput.type = "text";
-  labelInput.className = "timer-label-input";
-  labelInput.placeholder = `Timer ${index + 1} label (optional)`;
-  labelInput.maxLength = 24;
-  labelInput.value = timer.label || "";
+  const main = document.createElement("div");
+  main.className = "edit-controls-main";
 
-  const toggleRow = document.createElement("div");
-  toggleRow.className = "toggle-row";
+  const pencilBtn = createIconButton("pencil", "Rename timer");
 
-  const toneLabel = document.createElement("label");
-  const toneInput = document.createElement("input");
-  toneInput.type = "checkbox";
-  toneInput.className = "toggle-tone";
-  toneInput.checked = timer.tone;
-  toneLabel.append(toneInput, document.createTextNode(" Tone"));
+  const toneBtn = createIconButton("tone", "Tone", "toggle-tone");
+  toneBtn.classList.toggle("is-active", timer.tone);
+  toneBtn.setAttribute("aria-pressed", String(timer.tone));
 
-  const vibLabel = document.createElement("label");
-  const vibInput = document.createElement("input");
-  vibInput.type = "checkbox";
-  vibInput.className = "toggle-vibrate";
-  vibInput.checked = timer.vibrate;
-  vibLabel.append(vibInput, document.createTextNode(" Vibrate"));
+  const vibrateBtn = createIconButton("vibrate", "Vibrate", "toggle-vibrate");
+  vibrateBtn.classList.toggle("is-active", timer.vibrate);
+  vibrateBtn.setAttribute("aria-pressed", String(timer.vibrate));
 
   const pulseToggle = document.createElement("div");
   pulseToggle.className = "pulse-toggle";
   pulseToggle.setAttribute("role", "group");
-  pulseToggle.setAttribute("aria-label", "Pulse mode");
+  pulseToggle.setAttribute("aria-label", "Pulse pattern");
 
   const pulseSingleBtn = document.createElement("button");
   pulseSingleBtn.type = "button";
   pulseSingleBtn.className = "pulse-btn";
-  pulseSingleBtn.textContent = "Single";
+  pulseSingleBtn.innerHTML = '<span class="pulse-dots">●</span>';
+  pulseSingleBtn.setAttribute("aria-label", "Single pulse");
   pulseSingleBtn.classList.toggle("is-selected", timer.pulseMode === "single");
   pulseSingleBtn.setAttribute("aria-pressed", String(timer.pulseMode === "single"));
 
   const pulseTripleBtn = document.createElement("button");
   pulseTripleBtn.type = "button";
   pulseTripleBtn.className = "pulse-btn";
-  pulseTripleBtn.textContent = "Triple";
+  pulseTripleBtn.innerHTML = '<span class="pulse-dots">● ● ●</span>';
+  pulseTripleBtn.setAttribute("aria-label", "Triple pulse");
   pulseTripleBtn.classList.toggle("is-selected", timer.pulseMode === "triple");
   pulseTripleBtn.setAttribute("aria-pressed", String(timer.pulseMode === "triple"));
 
   pulseToggle.append(pulseSingleBtn, pulseTripleBtn);
 
-  toggleRow.append(toneLabel, vibLabel, pulseToggle);
+  const delBtn = createIconButton("trash", "Delete timer", "delete-icon-btn");
 
-  const rowActions = document.createElement("div");
-  rowActions.className = "row-actions";
+  main.append(pencilBtn, toneBtn, vibrateBtn, pulseToggle, delBtn);
+
+  const moveControls = document.createElement("div");
+  moveControls.className = "move-controls";
 
   const upBtn = document.createElement("button");
   upBtn.type = "button";
@@ -142,19 +136,16 @@ function buildEditControls(timer, index) {
   downBtn.disabled = index === state.timers.length - 1;
   downBtn.setAttribute("aria-label", "Move timer down");
 
-  const delBtn = document.createElement("button");
-  delBtn.type = "button";
-  delBtn.className = "delete-btn";
-  delBtn.textContent = "Delete";
+  moveControls.append(upBtn, downBtn);
 
-  rowActions.append(upBtn, downBtn, delBtn);
-  wrap.append(labelInput, toggleRow, rowActions);
+  wrap.append(main, moveControls);
 
   bindEditControls({
     timerId: timer.id,
-    labelInput,
-    toneInput,
-    vibInput,
+    labelEl,
+    pencilBtn,
+    toneBtn,
+    vibrateBtn,
     pulseSingleBtn,
     pulseTripleBtn,
     upBtn,
@@ -183,7 +174,7 @@ function updateProgress() {
     }
 
     const labelEl = li.querySelector(".timer-label");
-    if (labelEl) {
+    if (labelEl && labelEl.tagName === "SPAN") {
       labelEl.textContent = timer.label || "";
     }
   });
@@ -197,12 +188,13 @@ function updateControls() {
   startStopBtn.disabled = !hasTimers || state.editMode;
   resetBtn.disabled = !hasTimers || state.editMode || state.run.status === "idle";
 
-  let label = running ? "Stop" : "Start";
-  const loopsLeft = state.run.loopsRemaining || 0;
-  if ((running || paused) && loopsLeft > 0) {
-    label += ` (${loopsLeft} loop${loopsLeft === 1 ? "" : "s"} left)`;
+  const icon = running ? ICON_PATHS.pause : ICON_PATHS.play;
+  let timeLabel = "";
+  if (!running) {
+    const { totalLengthMs } = computeLoopLengths(state.timers, state.settings.loopCount);
+    timeLabel = `<span class="btn-time-label">${formatMs(totalLengthMs)}</span>`;
   }
-  startStopBtn.textContent = label;
+  startStopBtn.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${icon}"/></svg>${timeLabel}`;
   startStopBtn.classList.toggle("is-running", running);
 
   editToggleBtn.setAttribute("aria-pressed", String(state.editMode));

@@ -22,3 +22,8 @@ export function msToDigits(ms) {
   const s = totalSeconds % 60;
   return `${String(Math.min(m, 99)).padStart(2, "0")}${String(s).padStart(2, "0")}`;
 }
+
+export function computeLoopLengths(timers, loopCount) {
+  const loopLengthMs = timers.reduce((sum, t) => sum + t.durationMs, 0);
+  return { loopLengthMs, totalLengthMs: loopLengthMs * loopCount };
+}

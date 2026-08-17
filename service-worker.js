@@ -1,4 +1,4 @@
-const CACHE_VERSION = "v4";
+const CACHE_VERSION = "v7";
 const CACHE_NAME = `jogger-loop-${CACHE_VERSION}`;
 
 const APP_SHELL = [
@@ -20,6 +20,8 @@ const APP_SHELL = [
   "js/ui/installBanner.js",
   "js/ui/fullscreenPrompt.js",
   "js/ui/loopControls.js",
+  "js/ui/icons.js",
+  "js/ui/labelEdit.js",
   "icons/icon-192.png",
   "icons/icon-512.png",
   "icons/icon-512-maskable.png",

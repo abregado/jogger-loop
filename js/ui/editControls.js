@@ -1,24 +1,32 @@
 import { updateTimer, deleteTimer, moveTimer } from "../state.js";
+import { activateLabelEdit } from "./labelEdit.js";
 
 export function bindEditControls({
   timerId,
-  labelInput,
-  toneInput,
-  vibInput,
+  labelEl,
+  pencilBtn,
+  toneBtn,
+  vibrateBtn,
   pulseSingleBtn,
   pulseTripleBtn,
   upBtn,
   downBtn,
   delBtn,
 }) {
-  labelInput.addEventListener("input", () => {
-    updateTimer(timerId, { label: labelInput.value });
+  pencilBtn.addEventListener("click", () => activateLabelEdit(timerId, labelEl));
+
+  toneBtn.addEventListener("click", () => {
+    const active = !toneBtn.classList.contains("is-active");
+    toneBtn.classList.toggle("is-active", active);
+    toneBtn.setAttribute("aria-pressed", String(active));
+    updateTimer(timerId, { tone: active });
   });
-  toneInput.addEventListener("change", () => {
-    updateTimer(timerId, { tone: toneInput.checked });
-  });
-  vibInput.addEventListener("change", () => {
-    updateTimer(timerId, { vibrate: vibInput.checked });
+
+  vibrateBtn.addEventListener("click", () => {
+    const active = !vibrateBtn.classList.contains("is-active");
+    vibrateBtn.classList.toggle("is-active", active);
+    vibrateBtn.setAttribute("aria-pressed", String(active));
+    updateTimer(timerId, { vibrate: active });
   });
 
   function selectPulse(mode) {
