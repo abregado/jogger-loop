@@ -13,17 +13,21 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
 import com.abregado.joggerloop.service.TimerService
 import com.abregado.joggerloop.ui.MainScreen
 import com.abregado.joggerloop.ui.NotificationPermissionRationaleDialog
+import com.abregado.joggerloop.ui.theme.AppColorScheme
 import com.abregado.joggerloop.ui.theme.JoggerloopTheme
 
 class MainActivity : ComponentActivity() {
@@ -48,6 +52,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         notificationsPermitted = hasNotificationPermission()
@@ -57,7 +62,16 @@ class MainActivity : ComponentActivity() {
         showPermissionRationale = requiresNotificationPermission() && !notificationsPermitted
 
         setContent {
-            JoggerloopTheme {
+            // Collected here (separately from MainScreen's own collection of the same
+            // StateFlow) so the theme wrapping the whole screen - including this file's own
+            // dialogs - reacts to a scheme change immediately, not just the content inside
+            // MainScreen.
+            var colorScheme by remember { mutableStateOf(AppColorScheme.Default) }
+            LaunchedEffect(timerService) {
+                timerService?.state?.collect { colorScheme = AppColorScheme.fromName(it.colorScheme) }
+            }
+
+            JoggerloopTheme(colorScheme = colorScheme) {
                 Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
                     MainScreen(
                         service = timerService,

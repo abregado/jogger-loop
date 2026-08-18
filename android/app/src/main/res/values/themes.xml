@@ -2,4 +2,18 @@
 <resources>
 
     <style name="Theme.Joggerloop" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Uses the launcher adaptive icon (already teal-on-navy) rather than a separate
+         drawable, so androidx.core.splashscreen's icon zoom animation on Android 12+ gets
+         the same masking/sizing treatment the OS applies to any adaptive icon.
+
+         No branding-image item here on purpose: core-splashscreen's compat attr set (what
+         this style resolves against on minSdk 30) doesn't define windowSplashScreenBrandingImage
+         at all - only the native platform theme on API 31+ does, under the android: namespace.
+         See values-v31/themes.xml for the wordmark, added there via a same-named style override. -->
+    <style name="Theme.Joggerloop.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/launcher_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Joggerloop</item>
+    </style>
 </resources>

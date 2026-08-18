@@ -22,6 +22,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.abregado.joggerloop.service.TimerService
 import com.abregado.joggerloop.service.TimerServiceState
+import com.abregado.joggerloop.ui.theme.AppColorScheme
 
 @Composable
 fun MainScreen(
@@ -108,6 +109,13 @@ fun MainScreen(
                         ) {
                             Text("+ Add Timer")
                         }
+                    }
+                    item {
+                        ColorSchemePicker(
+                            selected = AppColorScheme.fromName(state.colorScheme),
+                            onSelect = { scheme -> service?.setColorScheme(scheme.name) },
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
                     }
                 }
             }

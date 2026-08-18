@@ -18,6 +18,7 @@ import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.abregado.joggerloop.MainActivity
+import com.abregado.joggerloop.R
 import com.abregado.joggerloop.data.AppSettings
 import com.abregado.joggerloop.data.AppState
 import com.abregado.joggerloop.data.CURRENT_SCHEMA_VERSION
@@ -235,6 +236,12 @@ class TimerService : Service() {
         persistAndPublish()
     }
 
+    fun setColorScheme(name: String) {
+        if (!isEditable()) return
+        settings = settings.copy(colorScheme = name)
+        persistAndPublish()
+    }
+
     private fun generateId(): String = java.util.UUID.randomUUID().toString().take(8)
 
     // --- Tick loop ----------------------------------------------------------------------
@@ -290,6 +297,7 @@ class TimerService : Service() {
             loopCount = settings.loopCount,
             finishTone = settings.finishTone,
             finishVibrate = settings.finishVibrate,
+            colorScheme = settings.colorScheme,
             timers = currentTimers,
             updatedAtMs = System.currentTimeMillis(),
         )
@@ -319,11 +327,10 @@ class TimerService : Service() {
             }
         }
 
-        // TODO(polish): swap in a proper notification icon - this is a placeholder system glyph.
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Jogger Loop")
             .setContentText(contentText)
-            .setSmallIcon(android.R.drawable.ic_popup_reminder)
+            .setSmallIcon(R.drawable.ic_notification)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(currentState.status == RunStatus.RUNNING || currentState.status == RunStatus.PAUSED)
             .setOnlyAlertOnce(true)

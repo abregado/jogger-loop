@@ -21,6 +21,7 @@ data class TimerServiceState(
     val loopCount: Int = 1,
     val finishTone: Boolean = true,
     val finishVibrate: Boolean = true,
+    val colorScheme: String = "DARK",
     val timers: List<TimerConfig> = emptyList(),
     val updatedAtMs: Long = 0L,
 )

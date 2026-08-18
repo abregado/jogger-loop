@@ -2,6 +2,7 @@ package com.abregado.joggerloop.ui
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -71,95 +72,109 @@ fun TimerRow(
         if (!editMode) isRenaming = false
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(MaterialTheme.colorScheme.surfaceVariant),
-    ) {
-        // Taller in edit mode: OutlinedTextField needs ~56dp minimum, more than the plain
-        // Text rows needed. Progress is always 0 while editing (only possible when idle),
-        // so the fill itself is invisible either way - safe to vary this without affecting it.
-        Box(modifier = Modifier.fillMaxWidth().height(if (editMode) 96.dp else 72.dp)) {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomStart)
-                    .fillMaxWidth()
-                    .fillMaxHeight(animatedProgress)
-                    .background(MaterialTheme.colorScheme.primary),
-            )
+    Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .clip(RoundedCornerShape(16.dp))
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+        ) {
+            // Taller in edit mode: OutlinedTextField needs ~56dp minimum, more than the plain
+            // Text rows needed. Progress is always 0 while editing (only possible when idle),
+            // so the fill itself is invisible either way - safe to vary this without affecting it.
+            Box(modifier = Modifier.fillMaxWidth().height(if (editMode) 96.dp else 72.dp)) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomStart)
+                        .fillMaxWidth()
+                        .fillMaxHeight(animatedProgress)
+                        .background(MaterialTheme.colorScheme.primary),
+                )
 
-            Row(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                if (isRenaming) {
-                    // Local, not bound to `timer.label` directly: the field must not fight
-                    // with the round-tripped value coming back through the service's
-                    // StateFlow on every keystroke, which caused it to lose focus.
-                    //
-                    // Exits on the keyboard's Done action rather than onFocusChanged: a
-                    // transient unfocused state during layout/keyboard-animation was
-                    // enough to trip a focus listener and bounce back out before the user
-                    // could type, even with nothing the user did causing it. Done is
-                    // explicit and unambiguous, and unlocks safely re-adding auto-focus
-                    // below since there's no listener left for it to race against.
-                    var localLabel by remember(timer.id) { mutableStateOf(timer.label) }
-                    val focusRequester = remember { FocusRequester() }
-                    OutlinedTextField(
-                        value = localLabel,
-                        onValueChange = {
-                            localLabel = it
-                            onLabelChange(it)
-                        },
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-                        keyboardActions = KeyboardActions(onDone = { isRenaming = false }),
-                        modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
-                    )
-                    LaunchedEffect(Unit) { focusRequester.requestFocus() }
-                } else {
-                    Text(
-                        text = timer.label.ifBlank { "Timer ${index + 1}" },
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isRenaming) {
+                        // Local, not bound to `timer.label` directly: the field must not fight
+                        // with the round-tripped value coming back through the service's
+                        // StateFlow on every keystroke, which caused it to lose focus.
+                        //
+                        // Exits on the keyboard's Done action rather than onFocusChanged: a
+                        // transient unfocused state during layout/keyboard-animation was
+                        // enough to trip a focus listener and bounce back out before the user
+                        // could type, even with nothing the user did causing it. Done is
+                        // explicit and unambiguous, and unlocks safely re-adding auto-focus
+                        // below since there's no listener left for it to race against.
+                        var localLabel by remember(timer.id) { mutableStateOf(timer.label) }
+                        val focusRequester = remember { FocusRequester() }
+                        OutlinedTextField(
+                            value = localLabel,
+                            onValueChange = {
+                                localLabel = it
+                                onLabelChange(it)
+                            },
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                            keyboardActions = KeyboardActions(onDone = { isRenaming = false }),
+                            modifier = Modifier
+                                .weight(1f)
+                                .focusRequester(focusRequester),
+                        )
+                        LaunchedEffect(Unit) { focusRequester.requestFocus() }
+                    } else {
+                        // Tapping the label itself opens the rename field - replaces a
+                        // separate pencil button, which was one more small target crowding
+                        // the edit-mode toolbar for no benefit over the label already being
+                        // right there. Only active in edit mode, matching where the pencil
+                        // button used to be shown.
+                        Text(
+                            text = timer.label.ifBlank { "Timer ${index + 1}" },
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f)
+                                .then(if (editMode) Modifier.clickable { isRenaming = true } else Modifier),
+                        )
+                    }
 
-                if (editMode) {
-                    DurationField(durationMs = timer.durationMs, onDurationChange = onDurationChange)
-                } else {
-                    Text(
-                        text = formatDuration(remainingMs),
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold,
-                    )
+                    if (editMode) {
+                        DurationField(durationMs = timer.durationMs, onDurationChange = onDurationChange)
+                    } else {
+                        Text(
+                            text = formatDuration(remainingMs),
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold,
+                        )
+                    }
                 }
+            }
+
+            if (editMode) {
+                TimerEditControls(
+                    tone = timer.tone,
+                    vibrate = timer.vibrate,
+                    pulseMode = timer.pulseMode,
+                    onToggleTone = onToggleTone,
+                    onToggleVibrate = onToggleVibrate,
+                    onSetPulseMode = onSetPulseMode,
+                    onDelete = onDelete,
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                )
             }
         }
 
         if (editMode) {
-            TimerEditControls(
-                tone = timer.tone,
-                vibrate = timer.vibrate,
-                pulseMode = timer.pulseMode,
+            ReorderControls(
                 canMoveUp = canMoveUp,
                 canMoveDown = canMoveDown,
-                onRename = { isRenaming = true },
-                onToggleTone = onToggleTone,
-                onToggleVibrate = onToggleVibrate,
-                onSetPulseMode = onSetPulseMode,
                 onMoveUp = onMoveUp,
                 onMoveDown = onMoveDown,
-                onDelete = onDelete,
-                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
+                modifier = Modifier.padding(start = 8.dp),
             )
         }
     }

@@ -3,6 +3,8 @@ package com.abregado.joggerloop.ui
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -17,6 +19,14 @@ import com.abregado.joggerloop.engine.RunStatus
 import com.abregado.joggerloop.service.TimerServiceState
 import com.abregado.joggerloop.ui.icons.AppIcons
 import com.abregado.joggerloop.util.formatDuration
+
+// Deliberately oversized vs. Material's 48dp minimum touch target - this app is used
+// mid-workout by people with reduced fine motor control, so every primary control gets
+// a large, hard-to-miss hit area rather than the platform default. Named distinctly from
+// ChunkyButtons.kt's ChunkyButtonSize/ChunkyIconSize (used in edit-mode panels) since this
+// always-visible top bar intentionally goes a size larger still.
+private val PrimaryButtonSize = 64.dp
+private val PrimaryIconSize = 32.dp
 
 @Composable
 fun ControlPanel(
@@ -36,11 +46,13 @@ fun ControlPanel(
         IconButton(
             onClick = onToggleEdit,
             enabled = !running && !paused,
+            modifier = Modifier.size(PrimaryButtonSize),
         ) {
             Icon(
                 AppIcons.Pencil,
                 contentDescription = "Edit timers",
                 tint = if (editMode) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+                modifier = Modifier.size(PrimaryIconSize),
             )
         }
 
@@ -49,16 +61,19 @@ fun ControlPanel(
         Button(
             onClick = if (running) onStop else onStart,
             enabled = hasTimers && !editMode,
-            modifier = Modifier.weight(1f),
+            modifier = Modifier
+                .weight(1f)
+                .height(PrimaryButtonSize),
         ) {
             Icon(
                 imageVector = if (running) AppIcons.Pause else AppIcons.Play,
                 contentDescription = if (running) "Pause" else "Start",
+                modifier = Modifier.size(PrimaryIconSize),
             )
             if (!running) {
                 Spacer(Modifier.width(8.dp))
                 val totalMs = state.timers.sumOf { it.durationMs } * state.loopCount
-                Text(formatDuration(totalMs))
+                Text(formatDuration(totalMs), style = MaterialTheme.typography.titleLarge)
             }
         }
 
@@ -67,8 +82,9 @@ fun ControlPanel(
         IconButton(
             onClick = onReset,
             enabled = hasTimers && !editMode && state.status != RunStatus.IDLE,
+            modifier = Modifier.size(PrimaryButtonSize),
         ) {
-            Icon(AppIcons.Replay, contentDescription = "Reset timers")
+            Icon(AppIcons.Replay, contentDescription = "Reset timers", modifier = Modifier.size(PrimaryIconSize))
         }
     }
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- windowSplashScreenBrandingImage only exists as a native platform attribute on
+         API 31+ (the core-splashscreen compat library has no cross-version equivalent for
+         it) - this merges into the base Theme.Joggerloop.Splash definition in values/themes.xml
+         on devices that actually support it, rather than failing resource linking on minSdk 30. -->
+    <style name="Theme.Joggerloop.Splash">
+        <item name="android:windowSplashScreenBrandingImage">@drawable/splash_wordmark</item>
+    </style>
+</resources>
