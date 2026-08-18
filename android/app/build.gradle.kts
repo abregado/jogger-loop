@@ -52,6 +52,18 @@ android {
     }
 }
 
+// Gradle's own default output name (app-release.apk) is meaningless once it's sitting in a
+// GitHub Releases list next to other tagged versions - people sideloading this pick the file
+// by hand. Only the release build type is renamed; local debug builds keep the default since
+// they're never distributed.
+androidComponents {
+    onVariants(selector().withBuildType("release")) { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("jogger-loop-${output.versionName.get()}.apk")
+        }
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
