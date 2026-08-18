@@ -72,6 +72,14 @@ class TimerService : Service() {
         super.onCreate()
         repository = TimerRepository(applicationContext)
         createNotificationChannel()
+
+        // Load eagerly so a freshly-bound UI sees correct timers/loopCount immediately,
+        // rather than showing defaults until the user taps Start once. start() still
+        // reloads if idle/finished, to pick up edits made since the service was created.
+        val appState = repository.load()
+        currentTimers = appState.timers
+        settings = appState.settings
+        publishState()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -187,7 +195,9 @@ class TimerService : Service() {
             status = currentEngine?.status ?: RunStatus.IDLE,
             currentIndex = currentEngine?.currentIndex ?: 0,
             loopsRemaining = currentEngine?.loopsRemaining ?: 0,
+            loopCount = settings.loopCount,
             timers = currentTimers,
+            updatedAtMs = System.currentTimeMillis(),
         )
     }
 
