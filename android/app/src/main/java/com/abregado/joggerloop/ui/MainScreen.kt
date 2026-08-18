@@ -24,7 +24,12 @@ import com.abregado.joggerloop.service.TimerService
 import com.abregado.joggerloop.service.TimerServiceState
 
 @Composable
-fun MainScreen(service: TimerService?, modifier: Modifier = Modifier) {
+fun MainScreen(
+    service: TimerService?,
+    notificationsPermitted: Boolean,
+    onOpenNotificationSettings: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var state by remember { mutableStateOf(TimerServiceState()) }
     LaunchedEffect(service) {
         service?.state?.collect { state = it }
@@ -48,6 +53,10 @@ fun MainScreen(service: TimerService?, modifier: Modifier = Modifier) {
         )
 
         if (editMode) {
+            if (!notificationsPermitted) {
+                NotificationsDisabledBanner(onOpenSettings = onOpenNotificationSettings)
+            }
+
             val oneLoopMs = state.timers.sumOf { it.durationMs }
             LoopSettingsPanel(
                 loopCount = state.loopCount,

@@ -3,6 +3,7 @@ package com.abregado.joggerloop.service
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.app.Service
 import android.content.Intent
 import android.media.AudioManager
@@ -16,6 +17,7 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.abregado.joggerloop.MainActivity
 import com.abregado.joggerloop.data.AppSettings
 import com.abregado.joggerloop.data.AppState
 import com.abregado.joggerloop.data.CURRENT_SCHEMA_VERSION
@@ -318,18 +320,58 @@ class TimerService : Service() {
         }
 
         // TODO(polish): swap in a proper notification icon - this is a placeholder system glyph.
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("Jogger Loop")
             .setContentText(contentText)
             .setSmallIcon(android.R.drawable.ic_popup_reminder)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setOngoing(currentState.status == RunStatus.RUNNING || currentState.status == RunStatus.PAUSED)
             .setOnlyAlertOnce(true)
-            .build()
+
+        when (currentState.status) {
+            RunStatus.RUNNING -> builder.addAction(
+                android.R.drawable.ic_media_pause, "Pause", actionPendingIntent(ACTION_STOP),
+            )
+            RunStatus.PAUSED -> builder.addAction(
+                android.R.drawable.ic_media_play, "Resume", actionPendingIntent(ACTION_START),
+            )
+            else -> {}
+        }
+        // Deliberately not Reset - a destructive action here read as an "End"/"Cancel" button
+        // since it makes the whole notification vanish (see reset()'s stopForeground call).
+        // Open is non-destructive and gives a way back into the app instead; resetting the
+        // timer is still one tap away from there. Not a setContentIntent on the notification
+        // body either - too easy to hit by accident going for an action button next to it.
+        builder.addAction(android.R.drawable.ic_menu_view, "Open", openAppPendingIntent())
+
+        return builder.build()
+    }
+
+    // requestCode differs per action so each PendingIntent stays distinct rather than the
+    // three of them collapsing into (and overwriting) a single cached intent.
+    private fun actionPendingIntent(action: String): PendingIntent {
+        val intent = Intent(this, TimerService::class.java).setAction(action)
+        return PendingIntent.getService(
+            this,
+            action.hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     private fun updateNotification() {
         getSystemService(NotificationManager::class.java)?.notify(NOTIFICATION_ID, buildNotification())
+    }
+
+    private fun openAppPendingIntent(): PendingIntent {
+        val intent = Intent(this, MainActivity::class.java)
+            .setFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        return PendingIntent.getActivity(
+            this,
+            OPEN_APP_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     // --- Vibration / tone -------------------------------------------------------------------
@@ -412,6 +454,7 @@ class TimerService : Service() {
 
         private const val CHANNEL_ID = "timer_channel"
         private const val NOTIFICATION_ID = 1
+        private const val OPEN_APP_REQUEST_CODE = 1000
         private const val TICK_MS = 100L
         private const val NOTIFICATION_UPDATE_INTERVAL_MS = 1000L
         private const val FINISH_DISPLAY_MS = 4000L
