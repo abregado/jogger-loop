@@ -25,16 +25,25 @@ The PWA in the repo root keeps running unchanged, deployed to the same GitHub Pa
 
 Work is broken into phases, each with its own planning document. Roughly one phase = one focused work session.
 
-| Phase | Doc | Goal |
-|---|---|---|
-| 0 | [Environment setup](docs/phase-0-environment-setup.md) | Android Studio installed, empty Compose project running on your phone |
-| 1 | [Data model & persistence](docs/phase-1-data-model.md) | Kotlin data classes + JSON storage, versioned for future migrations |
-| 2 | [Timer engine](docs/phase-2-timer-engine.md) | Pure, unit-tested Kotlin port of the countdown/loop logic |
-| 3 | [Foreground service](docs/phase-3-foreground-service.md) | The piece that survives the lock screen — notification, vibration, tone, wake lock |
-| 4 | [Main UI](docs/phase-4-main-ui.md) | Compose timer list + control panel, bound to the service |
-| 5 | [Edit mode UI](docs/phase-5-edit-mode-ui.md) | Add/reorder/rename/delete timers, loop settings panel |
-| 6 | [Notifications & permissions](docs/phase-6-notifications-permissions.md) | Lock-screen notification actions, `POST_NOTIFICATIONS` flow |
-| 7 | [CI/CD & release](docs/phase-7-cicd-release.md) | Signed APK build + GitHub Release automation |
-| 8 | [Updates via Obtainium](docs/phase-8-updates-obtainium.md) | One-time end-user setup, no app code |
+| Phase | Doc | Goal | Status |
+|---|---|---|---|
+| 0 | [Environment setup](docs/phase-0-environment-setup.md) | Android Studio installed, empty Compose project running on your phone | ✅ Done |
+| 1 | [Data model & persistence](docs/phase-1-data-model.md) | Kotlin data classes + JSON storage, versioned for future migrations | ✅ Done |
+| 2 | [Timer engine](docs/phase-2-timer-engine.md) | Pure, unit-tested Kotlin port of the countdown/loop logic | ✅ Done |
+| 3 | [Foreground service](docs/phase-3-foreground-service.md) | The piece that survives the lock screen — notification, vibration, tone, wake lock | ✅ Done |
+| 4 | [Main UI](docs/phase-4-main-ui.md) | Compose timer list + control panel, bound to the service | ✅ Done |
+| 5 | [Edit mode UI](docs/phase-5-edit-mode-ui.md) | Add/reorder/rename/delete timers, loop settings panel | ✅ Done |
+| 6 | [Notifications & permissions](docs/phase-6-notifications-permissions.md) | Lock-screen notification actions, `POST_NOTIFICATIONS` flow | ⬜ Next up |
+| 7 | [CI/CD & release](docs/phase-7-cicd-release.md) | Signed APK build + GitHub Release automation | ✅ Done (built ahead of schedule to validate the pipeline early) |
+| 8 | [Updates via Obtainium](docs/phase-8-updates-obtainium.md) | One-time end-user setup, no app code | ⬜ Not started |
 
-Each doc has a goal, concrete tasks, the key Android APIs involved, and acceptance criteria for "this phase is done." None of this code exists yet — these are planning documents to work from, not a finished implementation.
+Each doc has a goal, concrete tasks, the key Android APIs involved, and acceptance criteria for "this phase is done." Phases 0–5 and 7 are implemented and committed — see git log for the detailed history of what was built and fixed along the way.
+
+## Implementation notes / deviations worth knowing before touching this code
+
+- **Vibration**: `VibrationEffect.createWaveform()` with a 1-element array (and separately, `createOneShot()`) didn't reliably fire on the test device, despite multi-element waveforms working fine. Both pulse modes now use multi-pulse patterns differentiated by count (3 vs 4) rather than 1-vs-3 — see the comment in `TimerService.vibrate()`. Tone keeps the original 1-beep/3-beep distinction; only vibration needed this workaround.
+- **Tone**: `ToneGenerator` only offers fixed preset tones, not arbitrary frequencies like the PWA's Web Audio oscillator (880/988/440 Hz) — picked distinguishable presets, not exact parity. Possible later polish: bundled WAV files via `SoundPool` for exact pitch matching.
+- **Service lifecycle**: `TimerService.start()` calls `ContextCompat.startForegroundService()` on itself before actually starting — required so the service survives `MainActivity` unbinding (e.g. screen lock), since being bound alone doesn't keep a service alive independent of its binder. See the comment there before changing service start/stop logic.
+- **Local Gradle CLI builds don't work on this dev machine** — `./gradlew` from a terminal hits a Windows/JDK bug (`Unable to establish loopback connection`, a `WEPollSelectorProvider`/Unix-domain-socket issue), unrelated to the project. Use Android Studio's Run button or its Gradle tool window instead; CI (Linux) is unaffected.
+- **Physical test device**: Pixel 6, adb serial `25051FDF600591`. An emulator is also often running alongside it — `adb` commands need `-s 25051FDF600591` to target the physical device specifically.
+- **Release signing keystore**: generated locally, lives outside the repo at `C:\Users\Ben Buckton\joggerloop-signing\release.keystore` (never committed — `*.keystore`/`*.jks` are gitignored). Its base64 form and passwords are already in the repo's GitHub Actions secrets (`RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) — Phase 7 is fully working, releases are just `git tag android-vX.Y.Z && git push --tags`.
