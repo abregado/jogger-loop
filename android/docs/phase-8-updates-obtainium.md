@@ -26,4 +26,4 @@ Building our own "check GitHub for a newer release" feature was considered and d
 
 ## Notes
 
-- If Obtainium's automatic APK-asset detection ever picks the wrong file (only relevant if a release ever has more than one attached asset — checksums, multiple ABI-split APKs, etc.), it can be pointed at a specific asset name pattern in its per-app config. Not a concern with the current single-APK release setup from Phase 7.
+- If Obtainium's automatic APK-asset detection ever picks the wrong file, it can be pointed at a specific asset name pattern in its per-app config. Each Phase 7 release already attaches two assets — the APK and a `checksums.txt` ([android-release.yml](../../.github/workflows/android-release.yml)) — but this isn't expected to be an issue since Obtainium filters candidates by `.apk` extension. Worth confirming during this phase's on-device test rather than assuming.

@@ -35,9 +35,9 @@ Work is broken into phases, each with its own planning document. Roughly one pha
 | 5 | [Edit mode UI](docs/phase-5-edit-mode-ui.md) | Add/reorder/rename/delete timers, loop settings panel | ✅ Done |
 | 6 | [Notifications & permissions](docs/phase-6-notifications-permissions.md) | Lock-screen notification actions, `POST_NOTIFICATIONS` flow | ✅ Done |
 | 7 | [CI/CD & release](docs/phase-7-cicd-release.md) | Signed APK build + GitHub Release automation | ✅ Done (built ahead of schedule to validate the pipeline early) |
-| 8 | [Updates via Obtainium](docs/phase-8-updates-obtainium.md) | One-time end-user setup, no app code | ⬜ Not started |
+| 8 | [Updates via Obtainium](docs/phase-8-updates-obtainium.md) | One-time end-user setup, no app code | ✅ Done |
 
-Each doc has a goal, concrete tasks, the key Android APIs involved, and acceptance criteria for "this phase is done." Phases 0–7 are implemented and committed — see git log for the detailed history of what was built and fixed along the way.
+Each doc has a goal, concrete tasks, the key Android APIs involved, and acceptance criteria for "this phase is done." All 8 phases are implemented and verified — see git log for the detailed history of what was built and fixed along the way. The full build plan is complete; ongoing work is polish and fixes rather than new phases.
 
 ## Implementation notes / deviations worth knowing before touching this code
 
