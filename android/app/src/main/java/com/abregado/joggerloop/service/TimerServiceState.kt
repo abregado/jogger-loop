@@ -19,6 +19,8 @@ data class TimerServiceState(
     val currentIndex: Int = 0,
     val loopsRemaining: Int = 0,
     val loopCount: Int = 1,
+    val finishTone: Boolean = true,
+    val finishVibrate: Boolean = true,
     val timers: List<TimerConfig> = emptyList(),
     val updatedAtMs: Long = 0L,
 )

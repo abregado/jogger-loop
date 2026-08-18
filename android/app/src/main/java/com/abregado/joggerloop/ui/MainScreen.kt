@@ -4,10 +4,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -28,6 +30,8 @@ fun MainScreen(service: TimerService?, modifier: Modifier = Modifier) {
         service?.state?.collect { state = it }
     }
 
+    var editMode by remember { mutableStateOf(false) }
+
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -36,21 +40,66 @@ fun MainScreen(service: TimerService?, modifier: Modifier = Modifier) {
     ) {
         ControlPanel(
             state = state,
+            editMode = editMode,
+            onToggleEdit = { editMode = !editMode },
             onStart = { service?.start() },
             onStop = { service?.stop() },
             onReset = { service?.reset() },
         )
 
-        if (state.timers.isEmpty()) {
+        if (editMode) {
+            val oneLoopMs = state.timers.sumOf { it.durationMs }
+            LoopSettingsPanel(
+                loopCount = state.loopCount,
+                finishTone = state.finishTone,
+                finishVibrate = state.finishVibrate,
+                oneLoopMs = oneLoopMs,
+                allLoopsMs = oneLoopMs * state.loopCount,
+                onDecrement = { service?.setLoopCount(state.loopCount - 1) },
+                onIncrement = { service?.setLoopCount(state.loopCount + 1) },
+                onToggleFinishTone = { service?.setFinishTone(!state.finishTone) },
+                onToggleFinishVibrate = { service?.setFinishVibrate(!state.finishVibrate) },
+            )
+        }
+
+        if (state.timers.isEmpty() && !editMode) {
             EmptyState(modifier = Modifier.fillMaxSize())
         } else {
-            LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
                 itemsIndexed(state.timers, key = { _, timer -> timer.id }) { index, timer ->
                     TimerRow(
-                        label = timer.label.ifBlank { "Timer ${index + 1}" },
+                        timer = timer,
+                        index = index,
+                        editMode = editMode,
                         remainingMs = service?.getRemainingMs(index) ?: timer.durationMs,
                         progress = service?.getProgress(index) ?: 0f,
+                        canMoveUp = index > 0,
+                        canMoveDown = index < state.timers.lastIndex,
+                        onLabelChange = { newLabel -> service?.updateTimer(timer.id) { it.copy(label = newLabel) } },
+                        onDurationChange = { newDurationMs ->
+                            service?.updateTimer(timer.id) { it.copy(durationMs = newDurationMs) }
+                        },
+                        onToggleTone = { service?.updateTimer(timer.id) { it.copy(tone = !it.tone) } },
+                        onToggleVibrate = { service?.updateTimer(timer.id) { it.copy(vibrate = !it.vibrate) } },
+                        onSetPulseMode = { mode -> service?.updateTimer(timer.id) { it.copy(pulseMode = mode) } },
+                        onMoveUp = { service?.moveTimer(timer.id, -1) },
+                        onMoveDown = { service?.moveTimer(timer.id, 1) },
+                        onDelete = { service?.deleteTimer(timer.id) },
                     )
+                }
+
+                if (editMode) {
+                    item {
+                        OutlinedButton(
+                            onClick = { service?.addTimer() },
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Text("+ Add Timer")
+                        }
+                    }
                 }
             }
         }

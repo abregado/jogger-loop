@@ -15,7 +15,10 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
 import com.abregado.joggerloop.data.AppSettings
+import com.abregado.joggerloop.data.AppState
+import com.abregado.joggerloop.data.CURRENT_SCHEMA_VERSION
 import com.abregado.joggerloop.data.PulseMode
 import com.abregado.joggerloop.data.TimerConfig
 import com.abregado.joggerloop.data.TimerRepository
@@ -115,6 +118,13 @@ class TimerService : Service() {
         }
         val runningEngine = engine ?: return
 
+        // Mark this service as independently "started", not just bound - otherwise it's
+        // torn down the moment MainActivity unbinds (e.g. onStop() when the screen locks),
+        // regardless of startForeground() below, which only affects notification/priority,
+        // not the bind-vs-started lifecycle. This is what makes a run survive the Activity
+        // going away entirely.
+        ContextCompat.startForegroundService(this, Intent(this, TimerService::class.java))
+
         runningEngine.start()
         acquireWakeLock()
         startForeground(NOTIFICATION_ID, buildNotification())
@@ -140,10 +150,90 @@ class TimerService : Service() {
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
 
-    fun getProgress(index: Int): Float = engine?.getProgress(index) ?: 0f
+    // While idle, always defer to currentTimers (kept fresh by every edit) rather than the
+    // engine - once constructed, a TimerEngine holds its own immutable snapshot of the
+    // timer list from whenever start() last built it, so editing currentTimers afterward
+    // doesn't reach it. Only a real in-progress run (RUNNING/PAUSED/FINISHED) should read
+    // through the engine's live computation.
+    fun getProgress(index: Int): Float {
+        val currentEngine = engine
+        if (currentEngine == null || currentEngine.status == RunStatus.IDLE) return 0f
+        return currentEngine.getProgress(index)
+    }
 
-    fun getRemainingMs(index: Int): Long =
-        engine?.getRemainingMs(index) ?: currentTimers.getOrNull(index)?.durationMs ?: 0L
+    fun getRemainingMs(index: Int): Long {
+        val currentEngine = engine
+        if (currentEngine == null || currentEngine.status == RunStatus.IDLE) {
+            return currentTimers.getOrNull(index)?.durationMs ?: 0L
+        }
+        return currentEngine.getRemainingMs(index)
+    }
+
+    // --- Editing --------------------------------------------------------------------------
+    // Only meaningful while idle - the UI disables edit mode while running/paused, and these
+    // guard defensively too so a stray call can't corrupt an in-progress run.
+
+    private fun isEditable(): Boolean {
+        val status = engine?.status ?: RunStatus.IDLE
+        return status != RunStatus.RUNNING && status != RunStatus.PAUSED
+    }
+
+    private fun persistAndPublish() {
+        // Publish immediately so the UI feels instant; the file write (real disk I/O) is
+        // pushed to a background dispatcher rather than blocking the caller - edit methods
+        // are called directly from UI callbacks like TextField.onValueChange, on the main
+        // thread, on every keystroke.
+        publishState()
+        val snapshot = AppState(schemaVersion = CURRENT_SCHEMA_VERSION, timers = currentTimers, settings = settings)
+        scope.launch(Dispatchers.IO) { repository.save(snapshot) }
+    }
+
+    fun addTimer() {
+        if (!isEditable()) return
+        currentTimers = currentTimers + TimerConfig(id = generateId(), durationMs = 30_000)
+        persistAndPublish()
+    }
+
+    fun deleteTimer(id: String) {
+        if (!isEditable()) return
+        currentTimers = currentTimers.filterNot { it.id == id }
+        persistAndPublish()
+    }
+
+    fun moveTimer(id: String, direction: Int) {
+        if (!isEditable()) return
+        val index = currentTimers.indexOfFirst { it.id == id }
+        val newIndex = index + direction
+        if (index == -1 || newIndex !in currentTimers.indices) return
+        currentTimers = currentTimers.toMutableList().apply { add(newIndex, removeAt(index)) }
+        persistAndPublish()
+    }
+
+    fun updateTimer(id: String, transform: (TimerConfig) -> TimerConfig) {
+        if (!isEditable()) return
+        currentTimers = currentTimers.map { if (it.id == id) transform(it) else it }
+        persistAndPublish()
+    }
+
+    fun setLoopCount(count: Int) {
+        if (!isEditable()) return
+        settings = settings.copy(loopCount = count.coerceIn(1, 99))
+        persistAndPublish()
+    }
+
+    fun setFinishTone(enabled: Boolean) {
+        if (!isEditable()) return
+        settings = settings.copy(finishTone = enabled)
+        persistAndPublish()
+    }
+
+    fun setFinishVibrate(enabled: Boolean) {
+        if (!isEditable()) return
+        settings = settings.copy(finishVibrate = enabled)
+        persistAndPublish()
+    }
+
+    private fun generateId(): String = java.util.UUID.randomUUID().toString().take(8)
 
     // --- Tick loop ----------------------------------------------------------------------
 
@@ -196,6 +286,8 @@ class TimerService : Service() {
             currentIndex = currentEngine?.currentIndex ?: 0,
             loopsRemaining = currentEngine?.loopsRemaining ?: 0,
             loopCount = settings.loopCount,
+            finishTone = settings.finishTone,
+            finishVibrate = settings.finishVibrate,
             timers = currentTimers,
             updatedAtMs = System.currentTimeMillis(),
         )
@@ -250,9 +342,14 @@ class TimerService : Service() {
     }
 
     private fun vibrate(pulseMode: PulseMode) {
+        // Neither a 1-element createWaveform() array nor createOneShot() reliably vibrates
+        // on-device, despite multi-element waveforms (the old TRIPLE pattern, the finish
+        // pattern) working fine - so both pulse modes now use multi-pulse waveforms,
+        // differentiated by count (3 vs 4) instead of 1-vs-3. Tone keeps its original
+        // 1-beep/3-beep distinction; only vibration needed this workaround.
         val pattern = when (pulseMode) {
-            PulseMode.SINGLE -> longArrayOf(550)
-            PulseMode.TRIPLE -> longArrayOf(140, 120, 140, 120, 140)
+            PulseMode.SINGLE -> longArrayOf(140, 120, 140, 120, 140)
+            PulseMode.TRIPLE -> longArrayOf(140, 120, 140, 120, 140, 120, 140)
         }
         getVibrator()?.vibrate(VibrationEffect.createWaveform(pattern, -1))
     }

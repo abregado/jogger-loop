@@ -7,6 +7,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,6 +21,8 @@ import com.abregado.joggerloop.util.formatDuration
 @Composable
 fun ControlPanel(
     state: TimerServiceState,
+    editMode: Boolean,
+    onToggleEdit: () -> Unit,
     onStart: () -> Unit,
     onStop: () -> Unit,
     onReset: () -> Unit,
@@ -26,20 +30,25 @@ fun ControlPanel(
 ) {
     val hasTimers = state.timers.isNotEmpty()
     val running = state.status == RunStatus.RUNNING
+    val paused = state.status == RunStatus.PAUSED
 
     Row(modifier = modifier.fillMaxWidth()) {
         IconButton(
-            onClick = {},
-            enabled = false, // Edit mode arrives in Phase 5
+            onClick = onToggleEdit,
+            enabled = !running && !paused,
         ) {
-            Icon(AppIcons.Pencil, contentDescription = "Edit timers")
+            Icon(
+                AppIcons.Pencil,
+                contentDescription = "Edit timers",
+                tint = if (editMode) MaterialTheme.colorScheme.primary else LocalContentColor.current,
+            )
         }
 
         Spacer(Modifier.width(12.dp))
 
         Button(
             onClick = if (running) onStop else onStart,
-            enabled = hasTimers,
+            enabled = hasTimers && !editMode,
             modifier = Modifier.weight(1f),
         ) {
             Icon(
@@ -57,7 +66,7 @@ fun ControlPanel(
 
         IconButton(
             onClick = onReset,
-            enabled = hasTimers && state.status != RunStatus.IDLE,
+            enabled = hasTimers && !editMode && state.status != RunStatus.IDLE,
         ) {
             Icon(AppIcons.Replay, contentDescription = "Reset timers")
         }
